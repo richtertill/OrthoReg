@@ -1,0 +1,15 @@
+# Conda environment for OrthoReg.
+# Create with: conda env create -f environment.yml
+# Activate with: conda activate orthoreg
+
+name: orthoreg
+channels:
+  - pytorch
+  - conda-forge
+
+dependencies:
+  - python=3.10
+  - pip
+  - pip:
+    - -r requirements.txt
+    - -e .

@@ -1,0 +1,20 @@
+# @package model
+# Hybrid SINDy + neural augmentation. Pair with
+# training.regularization=orthogonal (OrthoReg) or training.regularization=l2
+# (L2 baseline).
+
+hybrid_setting: true
+symbolic_regression: sindy
+
+# Numerical-derivative method to use as the training target. The dataset
+# pre-computes derivatives under both ``finite_difference`` and ``smooth``;
+# this key selects which one is used at training time (see
+# orthoreg.data.datamodule).
+diff_method: smooth
+
+# Neural-augmentation MLP shape. Defaults are sized for the modified
+# pendulum / Duffing systems; per-dataset paper values used in the NeurIPS
+# results are documented in the README's reproduction section. Override on
+# the command line with e.g. ``model.hidden_dim=200`` for LV / SIR.
+hidden_dim: 64
+num_layers: 3

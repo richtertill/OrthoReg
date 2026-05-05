@@ -1,0 +1,29 @@
+dataset_name: duffing
+
+forecaster:
+  # Trajectory budget. Goring et al. (2024), Appendix D.1 use t_int = 40.
+  n_samples: 1000
+  times: 40
+  granularity: 100
+  sampling_scheme: regular
+  diff_method: finite_difference
+
+  # Unforced Duffing oscillator parameters (Goring et al., 2024).
+  #   x' = y
+  #   y' = a * y - x * (b + c * x**2)
+  # The cubic stiffness term c * x**3 is intentionally absent from the
+  # symbolic library and must be captured by the neural component.
+  a: -0.5
+  b: -1.0
+  c: 0.1
+
+  # Padding so the unified training entry point can read beta* if asked.
+  # The Duffing ODE itself does not use them.
+  beta1: 0.8
+  beta2: 0.6
+  beta3: 0.4
+
+  # Initial conditions: training restricted to the positive basin (x > 0).
+  # OOD T2 evaluates the negative basin, OOD T3 negative basin with
+  # parameter shifts (see DuffingOscillatorDataset.get_standard_dataset).
+  y0_range: [[0.1, 3.0], [-1.0, 1.0]]

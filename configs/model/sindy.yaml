@@ -1,0 +1,16 @@
+# @package model
+# Pure-SINDy ablation: symbolic component only, no neural augmentation.
+# Pair with training.regularization=none.
+
+hybrid_setting: false
+symbolic_regression: sindy
+
+# Numerical-derivative method (see orthoreg.data.datamodule).
+diff_method: smooth
+
+# Augmentation-MLP shape is unused when ``hybrid_setting=false`` but kept
+# here so command-line overrides like ``model.hidden_dim=...`` do not
+# error. (``orthoreg.setup.setup_model`` only builds the MLP when
+# ``hybrid_setting=true``.)
+hidden_dim: 64
+num_layers: 3

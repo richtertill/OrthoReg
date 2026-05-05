@@ -1,0 +1,19 @@
+# @package model
+# Universal ODE baseline (Chen et al., 2018; Rackauckas et al., 2021).
+# Run via: python -m orthoreg.training.train_baseline dataset=pendulum model=universal_ode
+
+hybrid_setting: false
+symbolic_regression: null
+baseline_type: universal_ode
+diff_method: smooth
+
+# Network architecture.
+hidden_dim: 64
+num_layers: 3
+activation: tanh
+include_time: true
+
+# ODE integration parameters used at evaluation time.
+ode_method: dopri5
+ode_rtol: 1.0e-6
+ode_atol: 1.0e-8

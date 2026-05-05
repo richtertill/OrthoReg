@@ -1,0 +1,57 @@
+# Reproducibility.
+# Seeds numpy, torch (cpu+cuda), python random, and Lightning DataLoader
+# workers via lightning.fabric.seed_everything at the top of train().
+# Override on the command line with ``+training.seed=42``.
+seed: 0
+
+# Optimisation.
+lr: 0.0089
+gradient_clip_value: 1.0
+batch_size: 1024
+n_derivative_epochs: 2000
+
+# Symbolic library / SINDy thresholding.
+polynomial_degree: 2
+n_frequencies: 1
+symbolic_threshold: 0.045
+
+# Regularisation. ``regularization`` selects the term that decouples the
+# neural augmentation from the symbolic library:
+#   orthogonal -> empirical-orthogonality penalty (OrthoReg, paper main).
+#   l2         -> standard L2 penalty on the neural output (baseline).
+#   none       -> no penalty (paired with model=sindy for pure-SINDy).
+regularization: orthogonal
+
+# Per-regularisation strengths.
+l2_node_reg_weight: 0.005
+l2_symbolic_reg_weight: 0.001
+orthogonal_node_reg_weight: 0.005
+orthogonal_symbolic_reg_weight: 0.003
+
+# Stage-2 retraining: refit the surviving symbolic coefficients on the
+# extrapolation grid with the structure mask frozen. Disable with
+# ``training.retrain=False`` for a single-stage run.
+retrain: true
+retrain_lr: 0.001
+n_retrain_epochs: 500
+retrain_patience: 100
+
+# Optional scaling applied to the orthogonal regularization weights when
+# entering phase-2 retraining (orthogonal regime only). 1.0 keeps the
+# phase-1 weights. The paper's OOD-T3 numbers were produced with 0.1,
+# which relaxes the orthogonality constraint once the symbolic structure
+# has been fixed. Set to 0.1 to reproduce that ablation.
+retrain_orthogonal_reg_scale: 1.0
+
+# Optional neural-network freezing during the first ``freeze_epochs``
+# epochs (lets the symbolic structure stabilise before the augmentation
+# kicks in). Disabled by default.
+freeze_neural: false
+freeze_epochs: 0
+
+# Logging.
+wandb_project: orthoreg
+# Optional W&B entity. If unset, training reads $WANDB_ENTITY from the
+# environment; if neither is provided, training falls back to the local
+# CSV logger and never contacts wandb.ai.
+wandb_username: null

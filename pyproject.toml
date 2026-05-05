@@ -1,0 +1,70 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "orthoreg"
+version = "0.1.0"
+description = "Orthogonal Regularization for Hybrid Symbolic-Neural Dynamical Systems"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "Anonymous Authors", email = "anon@example.com"}
+]
+keywords = [
+    "hybrid-modeling",
+    "dynamical-systems",
+    "symbolic-regression",
+    "neural-networks",
+    "orthogonal-regularization",
+    "sindy",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Physics",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "torch==2.3.1",
+    "torchdiffeq==0.2.4",
+    "numpy==1.26.4",
+    "scipy==1.13.1",
+    "matplotlib==3.8.4",
+    "pysindy==1.7.5",
+    "lightning==2.3.3",
+    "hydra-core==1.3.2",
+    "omegaconf==2.3.0",
+    "prettytable==3.10.0",
+    "seaborn==0.13.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+]
+logging = [
+    "wandb>=0.15.0",
+]
+experiments = [
+    "pandas>=1.5.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/anonymous/orthoreg-neurips"
+Repository = "https://github.com/anonymous/orthoreg-neurips"
+"Bug Tracker" = "https://github.com/anonymous/orthoreg-neurips/issues"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"

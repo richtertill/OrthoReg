@@ -1,0 +1,29 @@
+dataset_name: pendulum
+
+forecaster:
+  # Trajectory budget. Paper Table 1: t in [0, 10] with 100 samples / unit.
+  n_samples: 1000
+  times: 10
+  granularity: 100
+  sampling_scheme: regular
+  diff_method: finite_difference
+
+  # Modified damped pendulum:
+  #   x0' = x1
+  #   x1' = -omega0**2 * sin(x0) - alpha * x1
+  #         + beta1 * cos(3 * x0) + beta2 * exp(-x0**2) + beta3 * tanh(x1)
+  # The cos / exp / tanh terms are absent from the polynomial library; the
+  # neural component must capture them. Default beta values correspond to
+  # the medium-missing-dynamics regime in Table 1.
+  omega0: 1.0
+  alpha: 0.2
+  beta1: 0.3
+  beta2: 0.25
+  beta3: 0.15
+
+  # Initial conditions: theta in [-pi/2, pi/2], dtheta/dt in [-1, 1].
+  y0_range: [[-1.5707963267948966, 1.5707963267948966], [-1.0, 1.0]]
+
+  # Optional measurement noise (Gaussian std). Override with
+  # ``dataset.forecaster.noise_level=0.05`` for the noise experiments.
+  noise_level: 0.0

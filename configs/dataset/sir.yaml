@@ -1,0 +1,9 @@
+dataset_name: sir
+
+forecaster:
+  # Trajectory budget.
+  n_samples: 1000
+  times: 10
+  granularity: 10
+  sampling_scheme: regular
+  diff_method: finite_difference

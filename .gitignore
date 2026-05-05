@@ -1,0 +1,103 @@
+# Python build / test caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+build/
+dist/
+*.egg-info/
+.eggs/
+.installed.cfg
+*.egg
+MANIFEST
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.coverage
+.coverage.*
+htmlcov/
+.hypothesis/
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Editor / IDE / agent state
+.vscode/
+.idea/
+.cursor/
+.cursorrules
+.cursorignore
+.aider*
+AGENTS.md
+CLAUDE.md
+.history/
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Hydra / Lightning runtime artefacts
+.hydra/
+multirun/
+outputs/
+lightning_logs/
+
+# Experiment artefacts (regenerated on first run)
+project_folder/
+logs/
+wandb/
+mlruns/
+results/
+
+# SLURM job outputs
+*.out
+*.err
+*.log
+slurm-*.out
+slurm-*.err
+
+# Model checkpoints and dataset caches
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.npy
+*.npz
+*.pkl
+*.pickle
+*.h5
+*.hdf5
+
+# Generated figures (output by analysis scripts)
+*.png
+*.pdf
+*.jpg
+*.jpeg
+*.svg
+*.eps
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*.swo
+*~
+
+# Internal cleanup notes (defensive: nothing in this repo should ship with
+# names like FOO_STATUS.md / FOO_PLAN.md / DELETION_*.md).
+*_STATUS.md
+*_SUMMARY.md
+*_VERIFICATION.md
+*_COMPLETE.md
+*_CLEANUP.md
+*_PLAN.md
+DELETION_*.md
+QUICK_TEST_*.md

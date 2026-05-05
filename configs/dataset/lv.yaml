@@ -1,0 +1,12 @@
+dataset_name: lv
+
+forecaster:
+  # Trajectory budget.
+  n_samples: 1000
+  times: 10
+  granularity: 10
+  sampling_scheme: regular
+
+  # Numerical-derivative methods to pre-compute and cache. The training
+  # entry point picks one of them via ``model.diff_method``.
+  diff_method: finite_difference

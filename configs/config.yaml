@@ -1,0 +1,11 @@
+defaults:
+  - dataset: pendulum
+  - model: hybrid_sindy
+  - training: training
+  - hparams_search: null
+  - _self_
+
+# To submit on SLURM, override the launcher group on the command line:
+#   python -m orthoreg.training.train -m \
+#       launcher=slurm_gpu hydra.launcher.partition=mygpu hydra.launcher.qos=mygpuqos
+# See configs/launcher/ for the templates.

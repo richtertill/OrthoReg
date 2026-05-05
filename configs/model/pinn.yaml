@@ -1,0 +1,23 @@
+# @package model
+# Physics-Informed Neural Network baseline (Raissi et al., 2019).
+# Run via: python -m orthoreg.training.train_baseline dataset=pendulum model=pinn
+
+hybrid_setting: false
+symbolic_regression: null
+baseline_type: pinn
+diff_method: smooth
+
+# Network architecture.
+hidden_dim: 64
+num_layers: 4
+activation: tanh
+
+# Loss weights (read by PINNExperiment).
+data_weight: 1.0
+physics_weight: 1.0
+bc_weight: 0.0
+
+# ODE integration parameters used at evaluation time.
+ode_method: dopri5
+ode_rtol: 1.0e-6
+ode_atol: 1.0e-8
