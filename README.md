@@ -31,16 +31,17 @@ tests/                   # Unit tests for the orthogonal projection (the core co
 ## Method in one equation
 
 OrthoReg adds an explicit empirical-orthogonality penalty to a sparse
-hybrid-SINDy objective. Given a symbolic library $\{\phi_j\}_{j=1}^M$ and a
-neural augmentation $\hat{f}_{\mathrm{aug}}(\,\cdot\,;\vartheta)$ evaluated on
-the observed states $\mathcal{D}=\{x_i\}_{i=1}^N$, the penalty is
+hybrid-SINDy objective. Given a symbolic library $`\{\phi_j\}_{j=1}^M`$ and
+a neural augmentation $`\hat{f}_{\mathrm{aug}}(\,\cdot\,;\vartheta)`$
+evaluated on the observed states $`\mathcal{D}=\{x_i\}_{i=1}^N`$, the
+penalty is
 
 $$\mathcal{L}_{\mathrm{reg}}^{\perp}(\vartheta) = \lambda \sum_{j=1}^M \langle \hat{f}_{\mathrm{aug}}, \phi_j \rangle_{\mathcal{D}}^2,$$
 
-where $\langle f, g \rangle_{\mathcal{D}} = \tfrac{1}{N} \sum_i f(x_i)^\top g(x_i)$ is
-the empirical inner product. The penalty is added to the standard
+where $`\langle f, g \rangle_{\mathcal{D}} = \tfrac{1}{N} \sum_i f(x_i)^\top g(x_i)`$
+is the empirical inner product. The penalty is added to the standard
 fit + L1 sparsity loss; vanishing penalty implies
-$\hat{f}_{\mathrm{aug}} \perp \mathrm{span}\{\phi_1, \ldots, \phi_M\}$.
+$`\hat{f}_{\mathrm{aug}} \perp \mathrm{span}\{\phi_1, \ldots, \phi_M\}`$.
 
 The paper makes a scoped empirical claim: OrthoReg helps most when the
 symbolic library is partially misspecified, in which regime it improves
