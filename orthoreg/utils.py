@@ -1,6 +1,17 @@
 """Tiny utility helpers shared across the package."""
 
+from typing import Any, Optional
+
 from torch.nn import init
+
+
+def get_wandb() -> Optional[Any]:
+    """Return the wandb module if installed, otherwise None."""
+    try:
+        import wandb
+    except ImportError:
+        return None
+    return wandb
 
 
 def init_weights(net, init_type="normal", init_gain=0.01):

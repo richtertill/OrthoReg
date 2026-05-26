@@ -122,10 +122,6 @@ def setup_model(cfg: DictConfig, train_data_shape: Tuple[int, ...], feature_libr
         n_states=n_states,
     )
 
-    # Augmentation MLP shape is read from the model config. The OLD repo
-    # mixed ``cfg.dataset.forecaster.hidden_dim`` (used by hybrid_sindy /
-    # sindy) with ``cfg.model.hidden_dim`` (used by PINN / UODE); the new
-    # surface unifies both on ``cfg.model.hidden_dim``.
     hidden_dim = cfg.model.get('hidden_dim', 64)
     num_layers = cfg.model.get('num_layers', 3)
 

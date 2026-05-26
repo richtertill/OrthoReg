@@ -4,7 +4,7 @@ from orthoreg.setup import get_experiment_and_checkpoint_dir
 from orthoreg.regularization.orthoreg import l2_penalty, orthoreg_penalty
 import numpy as np
 from torchdiffeq import odeint
-import wandb
+from orthoreg.utils import get_wandb
 
 class HybridExperiment(L.LightningModule):
     def __init__(self, net, cfg):
@@ -538,7 +538,8 @@ class HybridExperiment(L.LightningModule):
             print(f"Normalized State MSE: {normalized_state_mse:.3e}")
             
             # Log both derivative and state space metrics
-            if wandb.run is not None:
+            wandb = get_wandb()
+            if wandb is not None and wandb.run is not None:
                 metrics = {
                     f'test/{test_set}/derivative_mse/dataloader_idx_{dataloader_idx}': losses['total_loss'],
                     f'test/{test_set}/normalized_derivative_mse/dataloader_idx_{dataloader_idx}': normalized_derivative_mse,
@@ -585,7 +586,8 @@ class HybridExperiment(L.LightningModule):
             orthogonality = torch.abs(dot_product)
 
             # Log to both wandb and Lightning
-            if wandb.run is not None:
+            wandb = get_wandb()
+            if wandb is not None and wandb.run is not None:
                 metrics = {
                     f'test/{test_set}/neural_ratio/dataloader_idx_{dataloader_idx}': neural_ratio,
                     f'test/{test_set}/unexplained_ratio/dataloader_idx_{dataloader_idx}': unexplained_ratio,

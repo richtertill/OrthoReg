@@ -15,7 +15,6 @@ import lightning as L
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-import wandb
 from lightning.fabric import seed_everything
 from lightning.pytorch.callbacks import LearningRateMonitor
 from lightning.pytorch.callbacks.early_stopping import EarlyStopping
@@ -25,6 +24,7 @@ from orthoreg.data.datamodule import HybridDataModule, setup_dataloaders
 from orthoreg.models.exp import HybridExperiment
 from orthoreg.paths import RESULT_DIR, TRAINING_DIR
 from orthoreg.setup import setup_feature_library, setup_model, setup_trainer
+from orthoreg.utils import get_wandb
 
 
 def plot_trajectories(exp, datamodule, method_name, dataset_name,
@@ -143,7 +143,8 @@ def train(cfg: DictConfig):
     seed = cfg.training.get("seed", 0)
     seed_everything(seed, workers=True)
 
-    if wandb.run is not None:
+    wandb = get_wandb()
+    if wandb is not None and wandb.run is not None:
         wandb.log({"freeze_epochs": cfg.training.freeze_epochs})
         wandb.log({"freeze_neural": cfg.training.freeze_neural})
 
@@ -292,22 +293,29 @@ def main(cfg: DictConfig):
     # orthoreg.setup.setup_trainer and never contacts wandb.ai.
     entity = cfg.training.get("wandb_username") or os.environ.get("WANDB_ENTITY")
     if entity is not None:
-        wandb.init(
-            project=cfg.training.wandb_project,
-            entity=entity,
-            dir=str(TRAINING_DIR),
-            config={
-                "lr": cfg.training.lr,
-                "hybrid_setting": cfg.model.hybrid_setting,
-                "dataset_name": cfg.dataset.dataset_name,
-                "regularization": cfg.training.regularization,
-                "symbolic_threshold": cfg.training.symbolic_threshold,
-                "l2_node_reg_weight": cfg.training.l2_node_reg_weight,
-                "l2_symbolic_reg_weight": cfg.training.l2_symbolic_reg_weight,
-                "orthogonal_node_reg_weight": cfg.training.orthogonal_node_reg_weight,
-                "orthogonal_symbolic_reg_weight": cfg.training.orthogonal_symbolic_reg_weight,
-            },
-        )
+        wandb = get_wandb()
+        if wandb is None:
+            print(
+                "Warning: WANDB_ENTITY is set but wandb is not installed. "
+                "Install with pip install -e '.[logging]' or unset WANDB_ENTITY."
+            )
+        else:
+            wandb.init(
+                project=cfg.training.wandb_project,
+                entity=entity,
+                dir=str(TRAINING_DIR),
+                config={
+                    "lr": cfg.training.lr,
+                    "hybrid_setting": cfg.model.hybrid_setting,
+                    "dataset_name": cfg.dataset.dataset_name,
+                    "regularization": cfg.training.regularization,
+                    "symbolic_threshold": cfg.training.symbolic_threshold,
+                    "l2_node_reg_weight": cfg.training.l2_node_reg_weight,
+                    "l2_symbolic_reg_weight": cfg.training.l2_symbolic_reg_weight,
+                    "orthogonal_node_reg_weight": cfg.training.orthogonal_node_reg_weight,
+                    "orthogonal_symbolic_reg_weight": cfg.training.orthogonal_symbolic_reg_weight,
+                },
+            )
 
     train(cfg)
 

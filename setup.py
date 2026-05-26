@@ -37,7 +37,7 @@ setup(
     description='Orthogonal Regularization for Hybrid Symbolic-Neural Dynamical Systems',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    url='https://github.com/anonymous/orthoreg-neurips',
+    url='https://github.com/richtertill/OrthoReg',
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Science/Research',
@@ -55,7 +55,7 @@ setup(
         'neural-networks orthogonal-regularization sindy'
     ),
     project_urls={
-        'Bug Reports': 'https://github.com/anonymous/orthoreg-neurips/issues',
-        'Source': 'https://github.com/anonymous/orthoreg-neurips',
+        'Bug Reports': 'https://github.com/richtertill/OrthoReg/issues',
+        'Source': 'https://github.com/richtertill/OrthoReg',
     },
 )

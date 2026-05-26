@@ -73,11 +73,11 @@ def test_pendulum_dataset_one_trajectory():
 def test_orthoreg_penalty_gradient_step():
     """Optimising the OrthoReg penalty drives library-overlap toward zero.
 
-    Mirrors the math used during training: we form the empirical inner
-    product between a learnable f_aug evaluation and a fixed symbolic
-    library, square it, sum over library terms, and step. With a small
-    enough learning rate this is convex and decreases monotonically.
+    Uses the shipping ``orthoreg_penalty`` on a learnable f_aug evaluation
+    against a fixed symbolic library.
     """
+    from orthoreg.regularization.orthoreg import orthoreg_penalty
+
     torch.manual_seed(0)
     np.random.seed(0)
 
@@ -100,10 +100,11 @@ def test_orthoreg_penalty_gradient_step():
 
     def ortho_penalty():
         f_vals = f_aug(states)                                  # (n, d)
-        # <f_aug, phi_j>_D = (1/n) sum_i (f_aug(x_i) . phi_j(x_i))
-        ip_per_sample = (f_vals.unsqueeze(-1) * phi.unsqueeze(1)).sum(dim=1)
-        ip = ip_per_sample.mean(dim=0)                          # (n_features,)
-        return (ip ** 2).sum()
+        f_bt = f_vals.unsqueeze(1)                              # (n, 1, d)
+        # Per-feature basis contributions, as in HybridExperiment.
+        coef = torch.eye(n_features, d)
+        basis = phi.unsqueeze(1).unsqueeze(-1) * coef.unsqueeze(0).unsqueeze(0)
+        return orthoreg_penalty(f_bt, basis)
 
     initial_loss = ortho_penalty().item()
     assert np.isfinite(initial_loss)

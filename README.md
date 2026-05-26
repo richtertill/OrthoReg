@@ -1,5 +1,6 @@
 # OrthoReg: Orthogonal Regularization for Hybrid Symbolic-Neural Dynamical Systems
 
+[![CI](https://github.com/richtertill/OrthoReg/actions/workflows/ci.yml/badge.svg)](https://github.com/richtertill/OrthoReg/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 
@@ -9,10 +10,10 @@ the neural residual. The result is a complementary decomposition: the
 symbolic part captures what the library can express, and the neural part
 captures what remains.
 
-This repository accompanies the NeurIPS submission *OrthoReg: Orthogonal
-Regularization for Hybrid Symbolic-Neural Dynamical Systems*. It contains
-the training pipeline, the four benchmark systems used in the paper, and
-the unit tests covering the orthogonal projection itself.
+This repository contains the code for *OrthoReg: Orthogonal Regularization
+for Hybrid Symbolic-Neural Dynamical Systems*. It ships the training
+pipeline, the four benchmark systems used in the paper, and the unit tests
+covering the orthogonal projection itself.
 
 ## What is in here
 
@@ -50,11 +51,15 @@ to $L^2$-regularised hybrid models, at the cost of some in-distribution fit.
 See the paper for the exact statements and the systems on which the trade-off
 is most pronounced.
 
+## Paper
+
+Preprint link will be added upon arXiv release.
+
 ## Install
 
 ```bash
-git clone <REPO_URL>
-cd orthoreg-neurips
+git clone https://github.com/richtertill/OrthoReg.git
+cd OrthoReg
 pip install -e .
 ```
 
@@ -112,7 +117,9 @@ pytest tests/ -v
 ```
 
 The unit tests cover the orthogonal projection mathematics (the core
-contribution), the SINDy feature library wiring, and the model-tensor shapes.
+contribution), the training-time `orthoreg_penalty`, hybrid-model forward
+passes, the SINDy feature library wiring, and a lightweight pendulum
+dataset smoke test.
 
 ## Logging
 
@@ -123,12 +130,10 @@ Biases instead, set `WANDB_ENTITY` in the environment (or
 ## Citation
 
 ```bibtex
-@inproceedings{anonymous2026orthoreg,
-    title     = {OrthoReg: Orthogonal Regularization for Hybrid Symbolic-Neural Dynamical Systems},
-    author    = {Anonymous Authors},
-    booktitle = {Submitted to NeurIPS},
-    year      = {2026},
-    note      = {Under double-blind review.}
+@misc{anonymous2026orthoreg,
+    title  = {OrthoReg: Orthogonal Regularization for Hybrid Symbolic-Neural Dynamical Systems},
+    author = {Anonymous Authors},
+    year   = {2026},
 }
 ```
 

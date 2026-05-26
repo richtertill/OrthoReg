@@ -12,7 +12,6 @@ import lightning as L
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-import wandb
 from omegaconf import DictConfig
 
 from orthoreg.data.datamodule import HybridDataModule, setup_dataloaders
@@ -20,6 +19,7 @@ from orthoreg.models.baselines.pinn import PINNExperiment
 from orthoreg.models.baselines.universal_ode import UniversalODEExperiment
 from orthoreg.paths import RESULT_DIR, TRAINING_DIR
 from orthoreg.setup import setup_feature_library, setup_trainer
+from orthoreg.utils import get_wandb
 
 def plot_trajectories(exp, datamodule, method_name, dataset_name,
                       out_dir="results", n_traj=3):
@@ -132,7 +132,8 @@ def plot_trajectories(exp, datamodule, method_name, dataset_name,
 
 def train_baseline(cfg: DictConfig):
     """Train baseline model (PINN or Universal ODE)."""
-    if wandb.run is not None:
+    wandb = get_wandb()
+    if wandb is not None and wandb.run is not None:
         wandb.log({"freeze_epochs": cfg.training.freeze_epochs})
         wandb.log({"freeze_neural": cfg.training.freeze_neural})
 
@@ -197,16 +198,23 @@ def train_baseline(cfg: DictConfig):
 def main(cfg: DictConfig):
     entity = cfg.training.get("wandb_username") or os.environ.get("WANDB_ENTITY")
     if entity is not None:
-        wandb.init(
-            project=cfg.training.wandb_project,
-            entity=entity,
-            dir=str(TRAINING_DIR),
-            config={
-                "lr": cfg.training.lr,
-                "baseline_type": cfg.model.baseline_type,
-                "dataset_name": cfg.dataset.dataset_name,
-            },
-        )
+        wandb = get_wandb()
+        if wandb is None:
+            print(
+                "Warning: WANDB_ENTITY is set but wandb is not installed. "
+                "Install with pip install -e '.[logging]' or unset WANDB_ENTITY."
+            )
+        else:
+            wandb.init(
+                project=cfg.training.wandb_project,
+                entity=entity,
+                dir=str(TRAINING_DIR),
+                config={
+                    "lr": cfg.training.lr,
+                    "baseline_type": cfg.model.baseline_type,
+                    "dataset_name": cfg.dataset.dataset_name,
+                },
+            )
     train_baseline(cfg)
 
 

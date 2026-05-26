@@ -1,11 +1,12 @@
 # Core dependencies for OrthoReg.
-# Pinned for the NeurIPS code release; bump as needed for newer hardware.
+# Pinned for reproducibility; bump as needed for newer hardware.
 torch==2.3.1
 torchdiffeq==0.2.4
 numpy==1.26.4
 scipy==1.13.1
 matplotlib==3.8.4
 pysindy==1.7.5
+scikit-learn>=1.1,<1.8
 lightning==2.3.3
 hydra-core==1.3.2
 omegaconf==2.3.0

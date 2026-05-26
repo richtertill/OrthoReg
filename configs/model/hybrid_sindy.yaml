@@ -13,7 +13,7 @@ symbolic_regression: sindy
 diff_method: smooth
 
 # Neural-augmentation MLP shape. Defaults are sized for the modified
-# pendulum / Duffing systems; per-dataset paper values used in the NeurIPS
+# pendulum / Duffing systems; per-dataset paper values used in the
 # results are documented in the README's reproduction section. Override on
 # the command line with e.g. ``model.hidden_dim=200`` for LV / SIR.
 hidden_dim: 64
