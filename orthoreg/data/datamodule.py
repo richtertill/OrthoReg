@@ -110,18 +110,22 @@ class HybridDataModule(L.LightningDataModule):
         return DataLoader(self.train_dataset, batch_size=self.cfg.training.batch_size, shuffle=False)
 
     def test_dataloader(self):
-        # Return a list of test dataloaders, skipping None datasets
+        # Return a list of test dataloaders, skipping None datasets.
+        # ``test_set_names[i]`` is the data_dict key behind dataloader ``i``
+        # (HybridExperiment.test_step uses it to label metrics).
         datasets = [
-            self.id_test_dataset,
-            self.ood_test_dataset_t2,
-            self.ood_test_dataset_t3,
-            self.id_test_dataset_extra,
-            self.ood_test_dataset_t2_extra,
-            self.ood_test_dataset_t3_extra
+            ('id_test_data', self.id_test_dataset),
+            ('ood_test_data_t2', self.ood_test_dataset_t2),
+            ('ood_test_data_t3', self.ood_test_dataset_t3),
+            ('id_test_data_extra', self.id_test_dataset_extra),
+            ('ood_test_data_t2_extra', self.ood_test_dataset_t2_extra),
+            ('ood_test_data_t3_extra', self.ood_test_dataset_t3_extra),
         ]
         test_loaders = []
-        for dataset in datasets:
+        self.test_set_names = []
+        for name, dataset in datasets:
             if dataset is not None:
+                self.test_set_names.append(name)
                 test_loaders.append(DataLoader(dataset, batch_size=self.cfg.training.batch_size, shuffle=False))
         return test_loaders
     

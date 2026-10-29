@@ -1,0 +1,36 @@
+dataset_name: lotka_volterra
+
+# True terms outside the symbolic library: the modulated coupling in each
+# of the two equations (used by the full-support F1).
+n_out_of_library_terms: 2
+
+forecaster:
+  # Trajectory budget: horizon T = 6 with granularity * times = 600 samples.
+  n_samples: 1000
+  times: 6
+  granularity: 100
+  sampling_scheme: regular
+  diff_method: finite_difference
+
+  # Lotka-Volterra with modulated coupling:
+  #   x0' = alpha*x0 - beta*x0*x1
+  #         + epsilon1*x0*sin(omega_fast*t)*cos(omega_fast*x0*x1)*sin(omega_slow*(x0+x1))
+  #   x1' = delta*x0*x1 - gamma*x1
+  #         + epsilon2*x1*sin(omega_fast*t)*cos(omega_fast*x0*x1)*sin(omega_slow*(x0+x1))
+  #               *sin(x0/(x1 + 1e-6))
+  alpha: 5.0
+  beta: 2.5
+  gamma: 5.0
+  delta: 2.5
+  # Missing-dynamics strength: (1.5, 1.0) times the reported difficulty 2.0.
+  epsilon1: 3.0
+  epsilon2: 2.0
+  omega_fast: 10.0
+  omega_slow: 2.0
+
+  # Initial conditions (prey, predator) for train / ID test.
+  y0_range: [[0.5, 2.0], [0.5, 2.0]]
+  # OOD T2: wider initial-condition box, same parameters.
+  ood_t2_y0_range: [[0.2, 3.0], [0.2, 3.0]]
+  # OOD T3: same initial conditions, every parameter scaled by this factor.
+  ood_t3_param_scale: 1.2

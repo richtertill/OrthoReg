@@ -1,7 +1,7 @@
 """Minimal training run that does not require SLURM or W&B.
 
 Edit the constants at the top of the file to switch the dataset, the
-model, the regularisation, or the training budget. Then::
+model, the regularization, or the training budget. Then::
 
     python examples/quick_train.py
 
@@ -27,12 +27,12 @@ from hydra.core.global_hydra import GlobalHydra  # noqa: E402
 from omegaconf import OmegaConf  # noqa: E402
 
 from orthoreg.data.datamodule import HybridDataModule, setup_dataloaders  # noqa: E402
-from orthoreg.models.exp import HybridExperiment  # noqa: E402
-from orthoreg.setup import setup_feature_library, setup_model, setup_trainer  # noqa: E402
+from orthoreg.models.experiment import HybridExperiment  # noqa: E402
+from orthoreg.feature_library import setup_feature_library, setup_model, setup_trainer  # noqa: E402
 
 
 # --- Edit these to customise the run ----------------------------------------
-DATASET = "pendulum"            # one of: pendulum, lv, sir, duffing
+DATASET = "pendulum"            # one of: pendulum, duffing, lotka_volterra, sir, helmholtz
 MODEL = "hybrid_sindy"          # one of: hybrid_sindy, sindy
 REGULARIZATION = "orthogonal"   # one of: orthogonal, l2, none
 NUM_EPOCHS = 100                # 100 for a quick smoke test, 2000 for paper

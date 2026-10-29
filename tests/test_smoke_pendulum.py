@@ -1,23 +1,19 @@
 """
-End-to-end smoke test for OrthoReg.
+Lightweight smoke tests for OrthoReg.
 
-The goal is to back the README's "the install works" promise without
-requiring a GPU or a full Hydra/Lightning launch. We
   1. import the package,
-  2. take a short gradient run on a toy hybrid loss whose regularizer is
-     OrthoReg's empirical-orthogonality penalty, and
+  2. take a short gradient run on a toy problem whose loss is OrthoReg's
+     empirical-orthogonality penalty, and
   3. instantiate the modified damped pendulum dataset on a single short
-     trajectory (skipped if Lightning is not installed in the test env).
+     trajectory.
 
-Anything more than that (full datamodule wiring, multi-epoch training)
-belongs in `experiments/`, not in CI.
+Full training runs live in ``test_smoke_training.py``.
 """
 
 import tempfile
 
 import numpy as np
 import pysindy as ps
-import pytest
 import torch
 
 
@@ -44,10 +40,7 @@ def test_orthoreg_package_imports():
 
 def test_pendulum_dataset_one_trajectory():
     """The modified damped pendulum can produce a single trajectory."""
-    pytest.importorskip("lightning",
-                        reason="lightning is required for the dataset module")
-
-    from orthoreg.data.datasets.pend import PendulumDataset
+    from orthoreg.data.datasets.pendulum import PendulumDataset
 
     with tempfile.TemporaryDirectory() as tmp:
         t = np.linspace(0.0, 1.0, 50)
@@ -65,17 +58,13 @@ def test_pendulum_dataset_one_trajectory():
             reload=True,
         )
 
-    assert ds.y.shape[0] == 1, "expected one trajectory"
-    assert ds.y.shape[-1] == 2, "expected two state dims (theta, omega)"
+    assert ds.y.shape == (1, 50, 2)
     assert torch.isfinite(ds.y).all(), "ODE integration produced NaNs/Infs"
+    np.testing.assert_allclose(ds.y[0, 0].numpy(), [0.5, 0.0], atol=1e-6)
 
 
 def test_orthoreg_penalty_gradient_step():
-    """Optimising the OrthoReg penalty drives library-overlap toward zero.
-
-    Uses the shipping ``orthoreg_penalty`` on a learnable f_aug evaluation
-    against a fixed symbolic library.
-    """
+    """Optimizing the OrthoReg penalty drives library overlap toward zero."""
     from orthoreg.regularization.orthoreg import orthoreg_penalty
 
     torch.manual_seed(0)
@@ -90,36 +79,26 @@ def test_orthoreg_penalty_gradient_step():
     library = ps.PolynomialLibrary(degree=2, include_bias=False)
     library.fit(states_np)
     phi = torch.tensor(library.transform(states_np), dtype=torch.float32)
-    n_features = phi.shape[1]
 
-    # f_aug(x) = W x; deliberately initialised inside the symbolic span.
+    # f_aug(x) = W x, deliberately initialized inside the library span.
     f_aug = torch.nn.Linear(d, d, bias=False)
     f_aug.weight.data = torch.tensor([[1.0, 0.5], [0.5, 1.0]])
 
     optimizer = torch.optim.Adam(f_aug.parameters(), lr=5e-2)
 
-    def ortho_penalty():
-        f_vals = f_aug(states)                                  # (n, d)
-        f_bt = f_vals.unsqueeze(1)                              # (n, 1, d)
-        # Per-feature basis contributions, as in HybridExperiment.
-        coef = torch.eye(n_features, d)
-        basis = phi.unsqueeze(1).unsqueeze(-1) * coef.unsqueeze(0).unsqueeze(0)
-        return orthoreg_penalty(f_bt, basis)
-
-    initial_loss = ortho_penalty().item()
+    initial_loss = orthoreg_penalty(f_aug(states), phi).item()
     assert np.isfinite(initial_loss)
     assert initial_loss > 0, "starting f_aug should overlap the library"
 
     for _ in range(500):
         optimizer.zero_grad()
-        loss = ortho_penalty()
+        loss = orthoreg_penalty(f_aug(states), phi)
         loss.backward()
         optimizer.step()
 
-    final_loss = ortho_penalty().item()
+    final_loss = orthoreg_penalty(f_aug(states), phi).item()
     assert np.isfinite(final_loss)
     assert final_loss < initial_loss * 1e-2, (
         f"OrthoReg penalty failed to drive overlap toward zero "
         f"(before {initial_loss}, after {final_loss})"
     )
-    assert n_features > 0

@@ -15,12 +15,12 @@ def get_wandb() -> Optional[Any]:
 
 
 def init_weights(net, init_type="normal", init_gain=0.01):
-    """Initialise the weights of a torch ``nn.Module``.
+    """Initialize the weights of a torch ``nn.Module``.
 
     Parameters
     ----------
     net : torch.nn.Module
-        Module whose ``Conv*`` and ``Linear`` weights should be initialised.
+        Module whose ``Conv*`` and ``Linear`` weights should be initialized.
     init_type : str
         One of ``normal``, ``xavier``, ``kaiming``, ``orthogonal``,
         ``default``.

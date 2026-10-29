@@ -26,15 +26,9 @@ env/
 venv/
 ENV/
 
-# Editor / IDE / agent state
+# Editor / IDE state
 .vscode/
 .idea/
-.cursor/
-.cursorrules
-.cursorignore
-.aider*
-AGENTS.md
-CLAUDE.md
 .history/
 
 # Notebooks

@@ -1,15 +1,14 @@
 # Conda environment for OrthoReg.
 # Create with: conda env create -f environment.yml
 # Activate with: conda activate orthoreg
+# Dependencies (and their pins) are declared once, in pyproject.toml.
 
 name: orthoreg
 channels:
-  - pytorch
   - conda-forge
 
 dependencies:
   - python=3.10
   - pip
   - pip:
-    - -r requirements.txt
-    - -e .
+    - -e .[dev]

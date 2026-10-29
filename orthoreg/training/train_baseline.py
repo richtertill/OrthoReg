@@ -1,8 +1,9 @@
-"""Hydra entry point for the PINN and Universal ODE baselines.
+"""Hydra entry point for the PINN, Universal ODE and STLSQ baselines.
 
 Run from the repository root, e.g.
 
     python -m orthoreg.training.train_baseline dataset=pendulum model=pinn
+    python -m orthoreg.training.train_baseline dataset=pendulum model=stlsq
 """
 
 import os
@@ -12,13 +13,17 @@ import lightning as L
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+from lightning.fabric import seed_everything
+from lightning.pytorch.callbacks import LearningRateMonitor
+from lightning.pytorch.callbacks.early_stopping import EarlyStopping
 from omegaconf import DictConfig
 
 from orthoreg.data.datamodule import HybridDataModule, setup_dataloaders
 from orthoreg.models.baselines.pinn import PINNExperiment
+from orthoreg.models.baselines.stlsq import run_stlsq
 from orthoreg.models.baselines.universal_ode import UniversalODEExperiment
 from orthoreg.paths import RESULT_DIR, TRAINING_DIR
-from orthoreg.setup import setup_feature_library, setup_trainer
+from orthoreg.feature_library import setup_feature_library, setup_model, setup_trainer
 from orthoreg.utils import get_wandb
 
 def plot_trajectories(exp, datamodule, method_name, dataset_name,
@@ -131,7 +136,9 @@ def plot_trajectories(exp, datamodule, method_name, dataset_name,
         print(f"Warning: plotting failed but continuing: {e}")
 
 def train_baseline(cfg: DictConfig):
-    """Train baseline model (PINN or Universal ODE)."""
+    """Train baseline model (PINN, Universal ODE or STLSQ)."""
+    seed_everything(cfg.training.get("seed", 0), workers=True)
+
     wandb = get_wandb()
     if wandb is not None and wandb.run is not None:
         wandb.log({"freeze_epochs": cfg.training.freeze_epochs})
@@ -147,11 +154,23 @@ def train_baseline(cfg: DictConfig):
     print(f"Initialize dataloaders for initial training")
     data_dict = setup_dataloaders(dataset_name=cfg.dataset.dataset_name, cfg=cfg, feature_library=feature_library)
     
+    # STLSQ has no gradient training: fit, then score with the hybrid metrics.
+    if cfg.model.baseline_type == "stlsq":
+        dm = HybridDataModule(cfg, data_dict, feature_library)
+        callbacks, logger, trainer = setup_trainer(cfg)
+        net = setup_model(cfg=cfg, train_data_shape=data_dict["train_data"].y.shape,
+                          feature_library=feature_library,
+                          n_sym_features=feature_library.n_output_features_)
+        _, retrain_test_results, test_results = run_stlsq(
+            cfg, feature_library, data_dict, dm, trainer, net
+        )
+        return retrain_test_results, test_results
+
     # Initialize baseline experiment
     print(f"Initialize baseline experiment")
-    if cfg.model.baseline_type == 'pinn':
+    if cfg.model.baseline_type == "pinn":
         exp = PINNExperiment(cfg, feature_library)
-    elif cfg.model.baseline_type == 'universal_ode':
+    elif cfg.model.baseline_type == "universal_ode":
         exp = UniversalODEExperiment(cfg, feature_library)
     else:
         raise ValueError(f"Unknown baseline type: {cfg.model.baseline_type}")
@@ -168,11 +187,53 @@ def train_baseline(cfg: DictConfig):
     
     # Test on all test sets
     print(f"Testing baseline model on all test sets")
-    test_dataloaders = [
-        dm.test_dataloader()[i] for i in range(6)  # Get all test dataloaders (including ood_t3)
-    ]
-    test_results = trainer.test(exp, dataloaders=test_dataloaders)
-    
+    test_results = trainer.test(exp, datamodule=dm)
+
+    # Phase 2, as for the hybrids (orthoreg.training.train): continue
+    # training on t3_extra with retrain_lr, then test on all splits.
+    retrain_test_results = None
+    if cfg.training.retrain:
+        print(f"Phase 2: continuing training on t3_extra")
+        retrain_data_dict = {
+            'train_data': data_dict['ood_test_data_t3_extra'],  # Use t3_extra for training
+            'train_data_extra': None,
+            'id_test_data': data_dict['id_test_data'],
+            'id_test_data_extra': data_dict['id_test_data_extra'],
+            'ood_test_data_t2': data_dict['ood_test_data_t2'],
+            'ood_test_data_t2_extra': data_dict['ood_test_data_t2_extra'],
+            'ood_test_data_t3': data_dict['ood_test_data_t3'],
+            'ood_test_data_t3_extra': data_dict['ood_test_data_t3_extra'],
+            'W_true': data_dict['W_true']
+        }
+        retrain_dm = HybridDataModule(cfg, retrain_data_dict, feature_library)
+
+        # PINN / UODE build their optimizer from ``exp.lr`` (set in __init__).
+        exp.lr = cfg.training.retrain_lr
+
+        retrain_trainer = L.Trainer(
+            max_epochs=cfg.training.n_retrain_epochs,
+            callbacks=[
+                EarlyStopping(
+                    monitor="train/total_loss",
+                    patience=cfg.training.retrain_patience,
+                    mode="min",
+                    verbose=True,
+                ),
+                LearningRateMonitor(logging_interval="step"),
+            ],
+            log_every_n_steps=10,
+            logger=logger,
+            accelerator="gpu" if torch.cuda.is_available() else "cpu",
+            devices=1,
+            gradient_clip_val=None,
+        )
+        retrain_trainer.fit(exp, retrain_dm)
+
+        print(f"Testing retrained baseline model on all test sets")
+        retrain_test_results = retrain_trainer.test(exp, retrain_dm)
+    else:
+        print(f"Retraining disabled - skipping Phase 2")
+
     print(f"Training finished")
     
     # Plot qualitative trajectories
@@ -191,7 +252,7 @@ def train_baseline(cfg: DictConfig):
         import traceback
         traceback.print_exc()
 
-    return test_results, test_results
+    return retrain_test_results, test_results
 
 
 @hydra.main(config_path="../../configs", config_name="config", version_base=None)

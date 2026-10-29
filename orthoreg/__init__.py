@@ -8,9 +8,9 @@ Two surfaces are exposed:
 
 - The training pipeline, configured with Hydra and run from the command
   line (see the README quickstart and ``configs/``).
-- The orthogonal-projection utilities used inside the training loop,
-  available directly from this package for analytical work or unit
-  testing:
+- The training-time penalties (``orthoreg_penalty``, ``l2_penalty``) and
+  the offline orthogonal-projection utilities used by the examples and
+  tests, available directly from this package for analytical work:
 
     >>> from orthoreg import (
     ...     compute_empirical_inner_product,

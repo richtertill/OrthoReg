@@ -1,29 +1,29 @@
 """Core OrthoReg penalty used during hybrid-SINDy training.
 
 This is the file the paper's main contribution lives in. ``HybridExperiment``
-calls :func:`orthoreg_penalty` from inside its derivative-loss step, and the
-returned scalar is multiplied by ``training.orthogonal_node_reg_weight`` /
-``training.orthogonal_symbolic_reg_weight`` and added to the SINDy fit loss
-(see :mod:`orthoreg.models.exp`).
+(see :mod:`orthoreg.models.experiment`) calls :func:`orthoreg_penalty` or
+:func:`l2_penalty` inside its training step and multiplies the result by
+the node regularization weight ``lambda``.
 
 Math
 ----
-Let ``f_aug`` be the neural augmentation evaluated on a batch of states and
-``{phi_j}`` the active symbolic basis functions weighted by their current
-SINDy coefficients (i.e. each ``phi_j`` is an *individual* contribution
-``c_j * varphi_j(x)`` to the symbolic prediction). The empirical inner
-product over a minibatch of size ``B*T`` is
+Let ``f_aug`` be the neural augmentation evaluated on a batch of states
+``x_1, ..., x_B`` (and, for trajectory batches, on every time step) and
+``phi_1, ..., phi_M`` the *raw* features of the symbolic library. Each
+library slot is a vector field ``phi_j e_k`` (feature ``j`` placed in
+state dimension ``k``), so the empirical inner products are
 
-    <f_aug, phi_j>_D = (1/(B*T)) * sum_{b,t} f_aug(x_{b,t}) * phi_j(x_{b,t})
+    g_jk = <f_aug, phi_j e_k>_D = (1/B) * sum_i f_aug,k(x_i) * phi_j(x_i)
 
-and the OrthoReg penalty (per output state) is
+and the OrthoReg penalty (Algorithm 1 in the paper) is
 
-    L_ortho = sum_j <f_aug, phi_j>_D ** 2
+    L_orth = lambda * sum_{j,k} g_jk ** 2.
 
-summed across output dimensions. Driving ``L_ortho`` to zero pushes
-``f_aug`` to be empirically orthogonal to every active library term, so the
-neural component can only capture what the symbolic library cannot. This is
-the function-space-orthogonality formulation in Section 3 of the paper.
+The features enter unscaled: neither the current SINDy coefficients nor the
+thresholding mask touch the penalty, so ``f_aug`` is pushed away from the
+span of the whole library, not just from the currently active terms.
+Driving ``L_orth`` to zero makes ``f_aug`` empirically orthogonal to every
+library slot.
 
 The analytical batch projection ``P_V g`` and ``g - P_V g`` (used by
 ``examples/`` and ``tests/`` to verify the geometry) live in
@@ -36,42 +36,49 @@ import torch
 
 
 def orthoreg_penalty(pred_aug: torch.Tensor,
-                     symbolic_basis: torch.Tensor) -> torch.Tensor:
-    """Empirical-orthogonality penalty between ``pred_aug`` and the library.
+                     features: torch.Tensor) -> torch.Tensor:
+    """Empirical-orthogonality penalty ``sum_{j,k} <f_aug, phi_j e_k>_D^2``.
 
     Parameters
     ----------
-    pred_aug : torch.Tensor, shape ``[B, T, state_dim]``
-        Per-step output of the neural augmentation evaluated on the batch.
-    symbolic_basis : torch.Tensor, shape ``[B, T, n_features, state_dim]``
-        Per-step contribution of each symbolic library term, already
-        multiplied by its current SINDy coefficient (so inactive terms
-        contribute zero). Produced by
-        :meth:`orthoreg.models.exp.HybridExperiment.get_symbolic_basis_predictions`.
+    pred_aug : torch.Tensor, shape ``[..., state_dim]``
+        Output of the neural augmentation on the batch, e.g. ``[B, state_dim]``
+        or ``[B, T, state_dim]``.
+    features : torch.Tensor, shape ``[..., n_features]``
+        Raw library features ``phi_j(x)`` at the same points, with the same
+        leading dimensions as ``pred_aug``.
 
     Returns
     -------
     torch.Tensor
-        Scalar tensor: ``sum_j sum_d <f_aug_d, phi_j>_D ** 2``.
+        Scalar ``sum_{j,k} g_jk ** 2`` (without the weight ``lambda``), where
+        ``g_jk`` is the mean of ``phi_j * f_aug,k`` over all leading
+        (batch and time) dimensions.
     """
-    if pred_aug.dim() != 3:
+    if pred_aug.dim() < 2:
         raise ValueError(
-            f"pred_aug must be [B, T, state_dim], got shape {tuple(pred_aug.shape)}"
+            f"pred_aug must be [..., state_dim], got shape {tuple(pred_aug.shape)}"
         )
-    if symbolic_basis.dim() != 4:
+    if features.shape[:-1] != pred_aug.shape[:-1]:
         raise ValueError(
-            f"symbolic_basis must be [B, T, n_features, state_dim], "
-            f"got shape {tuple(symbolic_basis.shape)}"
+            f"features must share the leading dimensions of pred_aug, got "
+            f"{tuple(features.shape)} and {tuple(pred_aug.shape)}"
         )
 
-    # Broadcast pred_aug over the n_features axis and take the empirical
-    # inner product (mean over B and T) for each (feature, state-dim) pair.
-    products = pred_aug.unsqueeze(2) * symbolic_basis
-    inner_products = torch.mean(products, dim=[0, 1])
+    # Flatten batch (and time) into a single sample axis of size N.
+    pred_aug = pred_aug.reshape(-1, pred_aug.shape[-1])
+    features = features.reshape(-1, features.shape[-1]).to(pred_aug.dtype)
+
+    # g[j, k] = (1/N) sum_i phi_j(x_i) * f_aug,k(x_i)
+    inner_products = features.T @ pred_aug / pred_aug.shape[0]
     return torch.sum(inner_products.pow(2))
 
 
 def l2_penalty(pred_aug: torch.Tensor) -> torch.Tensor:
-    """Vanilla L2 penalty on the neural augmentation. Baseline used by
-    ``training.regularization=l2``: ``mean_b ||f_aug(x_b)||_2``."""
-    return torch.mean(torch.norm(pred_aug, p=2, dim=-1))
+    """L2 baseline ``mean_i ||f_aug(x_i)||_2^2`` (the paper's L2-regularized objective).
+
+    The squared norm is taken over the state dimension and averaged over all
+    leading (batch and time) dimensions. Used by
+    ``training.regularization=l2``.
+    """
+    return torch.mean(torch.sum(pred_aug.pow(2), dim=-1))

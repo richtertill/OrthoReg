@@ -1,4 +1,4 @@
-"""Modified damped pendulum dataset (paper Section 5).
+"""Modified damped pendulum dataset (paper Section 5, Eq. (9)).
 
 The dynamics
 
@@ -21,7 +21,7 @@ import torch
 from omegaconf import OmegaConf
 from scipy.integrate import odeint as scipy_odeint
 
-from orthoreg.data.datasets.utils import SeriesDataset
+from orthoreg.data.datasets.utils import SeriesDataset, as_ranges
 from orthoreg.paths import DATA_DIR
 
 
@@ -112,17 +112,6 @@ class PendulumDataset(SeriesDataset):
                 f"Dimension of initial value y0 should be {self.state_dim}"
             )
 
-        def _pendulum_ode_func(y, t, omega0, alpha, beta1, beta2, beta3):
-            x0, x1 = y
-            return [
-                x1,
-                -omega0 ** 2 * np.sin(x0)
-                - alpha * x1
-                + beta1 * np.cos(3 * x0)
-                + beta2 * np.exp(-x0 ** 2)
-                + beta3 * np.tanh(x1),
-            ]
-
         np.random.seed(seed)
         y0_array = self.get_initial_value_array(y0, n_samples)
 
@@ -134,7 +123,7 @@ class PendulumDataset(SeriesDataset):
         self.y = [None] * n_samples
         for i in range(n_samples):
             self.y[i] = scipy_odeint(
-                _pendulum_ode_func,
+                self._pendulum_ode_func,
                 y0_array[i],
                 t,
                 args=(
@@ -156,6 +145,18 @@ class PendulumDataset(SeriesDataset):
         self.scale(is_scale)
         self.estimate_all_derivatives()
         self.save()
+
+    @staticmethod
+    def _pendulum_ode_func(y, t, omega0, alpha, beta1, beta2, beta3):
+        x0, x1 = y
+        return [
+            x1,
+            -omega0 ** 2 * np.sin(x0)
+            - alpha * x1
+            + beta1 * np.cos(3 * x0)
+            + beta2 * np.exp(-x0 ** 2)
+            + beta3 * np.tanh(x1),
+        ]
 
     def get_params(self):
         return self.params
@@ -198,9 +199,9 @@ class PendulumDataset(SeriesDataset):
             import ast
 
             y0_id = ast.literal_eval(y0_id)
-        y0_id = [
-            [_eval_numeric_expr(val) for val in sublist] for sublist in y0_id
-        ]
+        y0_id = as_ranges(
+            [[_eval_numeric_expr(val) for val in sublist] for sublist in y0_id]
+        )
 
         omega0_id = float(cfg.dataset.forecaster.omega0)
         alpha_id = float(cfg.dataset.forecaster.alpha)
@@ -228,7 +229,7 @@ class PendulumDataset(SeriesDataset):
                 n_samples=n_samples, t=t_grid, y0=y0,
                 omega0=omega0, alpha=alpha,
                 beta1=beta1, beta2=beta2, beta3=beta3,
-                noise_level=noise_level,
+                noise_level=noise_level, root=root, reload=reload,
             )
 
         train_data = _build(t_interp, y0_id, omega0_id, alpha_id, beta1_id, beta2_id, beta3_id)

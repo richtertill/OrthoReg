@@ -1,0 +1,32 @@
+dataset_name: helmholtz
+
+# True terms outside the symbolic library: the corrugation A*cos(Omega*x0)
+# in the x1 equation (used by the full-support F1).
+n_out_of_library_terms: 1
+
+forecaster:
+  # Trajectory budget: horizon T = 20 with granularity * times = 800 samples.
+  n_samples: 1000
+  times: 20
+  granularity: 40
+  sampling_scheme: regular
+  diff_method: finite_difference
+
+  # Damped Helmholtz oscillator with high-frequency corrugation:
+  #   x0' = x1
+  #   x1' = -delta*x1 - k*x0 - q*x0^2 + A*cos(Omega*x0)
+  # In-library core: {x1} in eq0, {x1, x0, x0^2} in eq1. Omega = 7 is far
+  # from the library's unit Fourier frequency, so the corrugation is out of
+  # the library.
+  delta: 0.06
+  k: 1.6
+  q: 0.16
+  A: 2.0
+  Omega: 7.0
+
+  # Initial conditions [x0, x1]; the escape barrier sits at x0 = -k/q = -10.
+  y0_range: [[-6.0, 4.0], [-2.4, 2.4]]
+  # OOD T2: initial-condition box scaled by this factor, same parameters.
+  ood_t2_y0_scale: 1.2
+  # OOD T3: same initial conditions, (k, q) scaled by this factor.
+  ood_t3_core_scale: 1.2

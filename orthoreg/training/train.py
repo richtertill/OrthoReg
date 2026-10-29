@@ -21,9 +21,9 @@ from lightning.pytorch.callbacks.early_stopping import EarlyStopping
 from omegaconf import DictConfig, open_dict
 
 from orthoreg.data.datamodule import HybridDataModule, setup_dataloaders
-from orthoreg.models.exp import HybridExperiment
+from orthoreg.models.experiment import HybridExperiment
 from orthoreg.paths import RESULT_DIR, TRAINING_DIR
-from orthoreg.setup import setup_feature_library, setup_model, setup_trainer
+from orthoreg.feature_library import setup_feature_library, setup_model, setup_trainer
 from orthoreg.utils import get_wandb
 
 
@@ -52,15 +52,7 @@ def plot_trajectories(exp, datamodule, method_name, dataset_name,
                     feature_library.transform(x_np),
                     dtype=torch.float32, device=target_device,
                 )
-                pred_phy, pred_aug = exp.derivative_forward(x_features)
-                if exp.cfg.model.hybrid_setting:
-                    if exp.cfg.training.regularization == "orthogonal":
-                        orth_residual = exp.orthogonal_residual(pred_aug, pred_phy)
-                        pred_dy = pred_phy + orth_residual
-                    else:
-                        pred_dy = pred_phy + pred_aug
-                else:
-                    pred_dy = pred_phy
+                pred_dy, _, _ = exp.predict_derivative(x_features)
                 return pred_dy.to(target_device)
 
             from torchdiffeq import odeint
@@ -180,18 +172,19 @@ def train(cfg: DictConfig):
     
     # Test on all test sets
     print(f"Testing initial model on all test sets")
-    test_dataloaders = [
-        dm.test_dataloader()[i] for i in range(6)  # Get all test dataloaders (including ood_t3)
-    ]
-    test_results = trainer.test(exp, dataloaders=test_dataloaders)
+    test_results = trainer.test(exp, datamodule=dm)
     
-    # Save the symbolic structure (mask)
-    initial_mask = exp.net.model_phy.mask_.clone()
-    
-    # Phase 2: Retrain parameters with fixed structure on t3_extra
+    # Phase 2: continue training on t3_extra with retrain_lr. With
+    # training.retrain_fix_support=true the phase-1 coefficients are
+    # thresholded at symbolic_threshold and the support is frozen
+    # (HybridExperiment.fix_support), so the refit only updates the active
+    # coefficients and the network (HybridExperiment.retrain_parameters).
+    # Without it, phase 2 keeps optimizing the phase-1 objective: the new
+    # trainer restarts its epoch counter, so the stage-2 switch (which fires
+    # at epoch >= n_derivative_epochs) never fires.
     retrain_test_results = None  # Initialize to None
     if cfg.training.retrain:
-        print(f"Phase 2: Retraining parameters with fixed structure on t3_extra")
+        print(f"Phase 2: continuing training on t3_extra")
         
         # Create new data dict for retraining
         retrain_data_dict = {
@@ -212,27 +205,16 @@ def train(cfg: DictConfig):
         
         with open_dict(cfg):
             cfg.training.lr = cfg.training.retrain_lr
-            # Optional: scale the orthogonal regularization weights for the
-            # phase-2 fine-tune. The paper uses 0.1 to relax the orthogonality
-            # constraint once the symbolic structure is fixed (Section 5,
-            # OOD-T3 ablation). Default 1.0 preserves the phase-1 weights.
-            if cfg.training.regularization == "orthogonal":
-                retrain_reg_scale = cfg.training.get(
-                    "retrain_orthogonal_reg_scale", 1.0
-                )
-                if retrain_reg_scale != 1.0:
-                    cfg.training.orthogonal_node_reg_weight *= retrain_reg_scale
-                    cfg.training.orthogonal_symbolic_reg_weight *= retrain_reg_scale
-                    print(
-                        f"Phase 2: scaling orthogonal reg weights by "
-                        f"{retrain_reg_scale} "
-                        f"(node={cfg.training.orthogonal_node_reg_weight:.6f}, "
-                        f"symbolic={cfg.training.orthogonal_symbolic_reg_weight:.6f})"
-                    )
+
+        # Threshold and freeze the symbolic support before the refit. The
+        # structure-fixed steps log under ``retrain/``.
+        fix_support = cfg.training.get("retrain_fix_support", False)
+        if fix_support:
+            exp.fix_support(cfg.training.symbolic_threshold)
 
         retrain_callbacks = [
             EarlyStopping(
-                monitor="train/total_loss",
+                monitor="retrain/total_loss" if fix_support else "train/total_loss",
                 patience=cfg.training.retrain_patience,
                 mode="min",
                 verbose=True,
@@ -250,11 +232,8 @@ def train(cfg: DictConfig):
             devices=1,
             gradient_clip_val=None,
         )
-        
-        # Ensure mask is fixed
-        exp.net.model_phy.mask_.data = initial_mask
-        
-        # Retrain with fixed structure on t3_extra
+
+        # Retrain on t3_extra
         retrain_trainer.fit(exp, retrain_dm)
         
         # Test on all datasets
@@ -274,15 +253,16 @@ def train(cfg: DictConfig):
     if torch.cuda.is_available():
         exp.net = exp.net.cuda()
 
-    plot_dir = RESULT_DIR / "plots"
-    plot_dir.mkdir(parents=True, exist_ok=True)
-    
-    try:
-        plot_trajectories(exp, dm, method_name, cfg.dataset.dataset_name, out_dir=str(plot_dir))
-    except Exception as e:
-        print(f"Warning: Plotting failed but continuing: {e}")
-        import traceback
-        traceback.print_exc()
+    if cfg.training.get("plot_trajectories", True):
+        plot_dir = RESULT_DIR / "plots"
+        plot_dir.mkdir(parents=True, exist_ok=True)
+
+        try:
+            plot_trajectories(exp, dm, method_name, cfg.dataset.dataset_name, out_dir=str(plot_dir))
+        except Exception as e:
+            print(f"Warning: Plotting failed but continuing: {e}")
+            import traceback
+            traceback.print_exc()
 
     return retrain_test_results, test_results
 
@@ -290,7 +270,7 @@ def train(cfg: DictConfig):
 def main(cfg: DictConfig):
     # Optional W&B logging. Resolved from config first, then $WANDB_ENTITY.
     # If neither is set the trainer uses the CSV logger configured in
-    # orthoreg.setup.setup_trainer and never contacts wandb.ai.
+    # orthoreg.feature_library.setup_trainer and never contacts wandb.ai.
     entity = cfg.training.get("wandb_username") or os.environ.get("WANDB_ENTITY")
     if entity is not None:
         wandb = get_wandb()

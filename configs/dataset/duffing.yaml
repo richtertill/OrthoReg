@@ -1,5 +1,9 @@
 dataset_name: duffing
 
+# True terms outside the symbolic library: the cubic stiffness c * x0**3
+# in the x1 equation (used by the full-support F1).
+n_out_of_library_terms: 1
+
 forecaster:
   # Trajectory budget. Goring et al. (2024), Appendix D.1 use t_int = 40.
   n_samples: 1000
@@ -17,13 +21,7 @@ forecaster:
   b: -1.0
   c: 0.1
 
-  # Padding so the unified training entry point can read beta* if asked.
-  # The Duffing ODE itself does not use them.
-  beta1: 0.8
-  beta2: 0.6
-  beta3: 0.4
-
-  # Initial conditions: training restricted to the positive basin (x > 0).
-  # OOD T2 evaluates the negative basin, OOD T3 negative basin with
-  # parameter shifts (see DuffingOscillatorDataset.get_standard_dataset).
-  y0_range: [[0.1, 3.0], [-1.0, 1.0]]
+  # Initial conditions are set in DuffingOscillatorDataset.get_standard_dataset:
+  # training restricted to the positive basin (x > 0), OOD T2 evaluates the
+  # negative basin, OOD T3 the negative basin with parameter shifts
+  # (a, b, c) -> (1.2 a, 1.2 b, 2.0 c).

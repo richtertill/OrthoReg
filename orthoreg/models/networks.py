@@ -60,7 +60,7 @@ class PhysicalModel(nn.Module):
 
         # Number of input features comes from the symbolic library; number
         # of output states is the number of state variables in the system
-        # and is supplied by the caller (orthoreg.setup.setup_model derives
+        # and is supplied by the caller (orthoreg.feature_library.setup_model derives
         # it from the training-data shape).
         n_features = feature_library.n_output_features_
         if n_states is None:

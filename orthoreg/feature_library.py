@@ -1,4 +1,4 @@
-"""Setup utilities for OrthoReg experiments."""
+"""Feature library, model and trainer setup for OrthoReg experiments."""
 import os
 from typing import Tuple
 from omegaconf import DictConfig

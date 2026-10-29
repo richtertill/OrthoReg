@@ -10,7 +10,7 @@ diff_method: smooth
 
 # Augmentation-MLP shape is unused when ``hybrid_setting=false`` but kept
 # here so command-line overrides like ``model.hidden_dim=...`` do not
-# error. (``orthoreg.setup.setup_model`` only builds the MLP when
-# ``hybrid_setting=true``.)
+# error. (``orthoreg.feature_library.setup_model`` builds the MLP, but it is
+# neither used nor trained when ``hybrid_setting=false``.)
 hidden_dim: 64
 num_layers: 3

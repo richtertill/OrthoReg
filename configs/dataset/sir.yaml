@@ -1,9 +1,33 @@
 dataset_name: sir
 
+# True terms outside the symbolic library: the memory-modulated term in
+# each of the three equations (used by the full-support F1).
+n_out_of_library_terms: 3
+
 forecaster:
-  # Trajectory budget.
+  # Trajectory budget: horizon T = 10 with granularity * times = 100 samples.
   n_samples: 1000
   times: 10
   granularity: 10
   sampling_scheme: regular
   diff_method: finite_difference
+
+  # Normalized SIR with memory-modulated terms (see orthoreg/data/datasets/sir.py):
+  #   S' = -beta*S*I/(S+I+R) + epsilon1 * (...)
+  #   I' =  beta*S*I/(S+I+R) - gamma*I + epsilon2 * (...)
+  #   R' =  gamma*I + epsilon3 * (...)
+  beta: 2.0
+  gamma: 1.0
+  epsilon1: 0.3
+  epsilon2: 0.25
+  epsilon3: 0.2
+  omega_fast: 3.0
+  omega_slow: 1.5
+  tau_memory: 2.0
+
+  # Initial conditions (S, I, R) for train / ID test.
+  y0_range: [[0.8, 1.0], [0.0, 0.2], [0.0, 0.1]]
+  # OOD T2: wider initial-condition box, same parameters.
+  ood_t2_y0_range: [[0.5, 1.0], [0.0, 0.4], [0.0, 0.2]]
+  # OOD T3: same initial conditions, every parameter scaled by this factor.
+  ood_t3_param_scale: 1.2

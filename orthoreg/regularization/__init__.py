@@ -4,7 +4,7 @@ Two distinct surfaces live here:
 
 - :mod:`orthoreg.regularization.orthoreg` -- the *training-time*
   empirical-orthogonality penalty. ``HybridExperiment`` calls
-  :func:`orthoreg_penalty` from inside its derivative-loss step; this is
+  :func:`orthoreg_penalty` from inside its training step; this is
   the file the paper's main contribution lives in.
 - :mod:`orthoreg.regularization.projection` -- the *offline* analytical
   projection helpers used by ``examples/`` and ``tests/`` to verify the

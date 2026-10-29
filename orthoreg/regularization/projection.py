@@ -10,7 +10,7 @@ The training loop does *not* use these helpers (it computes the
 empirical-orthogonality penalty directly inside the autograd graph; see
 :func:`orthoreg.regularization.orthoreg.orthoreg_penalty`). They exist so
 that ``examples/simple_pendulum_example.py`` and the unit tests can verify
-the geometry of the projection that OrthoReg minimises.
+the geometry of the projection that OrthoReg minimizes.
 """
 
 from typing import Tuple

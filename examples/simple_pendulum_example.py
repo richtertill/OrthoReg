@@ -3,7 +3,7 @@
 We synthesise a few short pendulum trajectories, build a polynomial
 symbolic library, and check that the orthogonal residual of a candidate
 neural-style function is empirically orthogonal to every library term.
-This is the same projection mathematically that OrthoReg minimises during
+This is the same projection mathematically that OrthoReg minimizes during
 training.
 """
 
@@ -67,7 +67,7 @@ max_ip = max(
 print(f"Residual orthogonal to every library term: max |<r, phi>| = {max_ip:.2e}")
 
 print(
-    "\nL2 regularisation only controls ||f_aug||; OrthoReg additionally "
+    "\nL2 regularization only controls ||f_aug||; OrthoReg additionally "
     "enforces <f_aug, phi_j> = 0 for every library term, i.e. the neural "
     "component cannot re-express what the symbolic library already captures."
 )

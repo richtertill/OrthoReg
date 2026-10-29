@@ -202,24 +202,24 @@ class DuffingOscillatorDataset(SeriesDataset):
         b_ood_t3 = b_id * 1.2
         c_ood_t3 = c_id * 2.0
 
-        train_data = cls(n_samples=n_samples, t=t_interp, y0=y0_id,
+        train_data = cls(n_samples=n_samples, root=root, reload=reload, t=t_interp, y0=y0_id,
                          a=a_id, b=b_id, c=c_id)
-        train_data_extra = cls(n_samples=n_samples, t=t_extrap, y0=y0_id,
+        train_data_extra = cls(n_samples=n_samples, root=root, reload=reload, t=t_extrap, y0=y0_id,
                                a=a_id, b=b_id, c=c_id)
 
-        id_test_data = cls(n_samples=n_samples, t=t_interp, y0=y0_id,
+        id_test_data = cls(n_samples=n_samples, root=root, reload=reload, t=t_interp, y0=y0_id,
                            a=a_id, b=b_id, c=c_id)
-        id_test_data_extra = cls(n_samples=n_samples, t=t_extrap, y0=y0_id,
+        id_test_data_extra = cls(n_samples=n_samples, root=root, reload=reload, t=t_extrap, y0=y0_id,
                                  a=a_id, b=b_id, c=c_id)
 
-        ood_test_data_t2 = cls(n_samples=n_samples, t=t_interp, y0=y0_ood_t2,
+        ood_test_data_t2 = cls(n_samples=n_samples, root=root, reload=reload, t=t_interp, y0=y0_ood_t2,
                                a=a_ood_t2, b=b_ood_t2, c=c_ood_t2)
-        ood_test_data_t2_extra = cls(n_samples=n_samples, t=t_extrap, y0=y0_ood_t2,
+        ood_test_data_t2_extra = cls(n_samples=n_samples, root=root, reload=reload, t=t_extrap, y0=y0_ood_t2,
                                      a=a_ood_t2, b=b_ood_t2, c=c_ood_t2)
 
-        ood_test_data_t3 = cls(n_samples=n_samples, t=t_interp, y0=y0_ood_t3,
+        ood_test_data_t3 = cls(n_samples=n_samples, root=root, reload=reload, t=t_interp, y0=y0_ood_t3,
                                a=a_ood_t3, b=b_ood_t3, c=c_ood_t3)
-        ood_test_data_t3_extra = cls(n_samples=n_samples, t=t_extrap, y0=y0_ood_t3,
+        ood_test_data_t3_extra = cls(n_samples=n_samples, root=root, reload=reload, t=t_extrap, y0=y0_ood_t3,
                                      a=a_ood_t3, b=b_ood_t3, c=c_ood_t3)
 
         return [[

@@ -1,21 +1,12 @@
 """Container that bundles the symbolic and neural sub-networks.
 
-Why this file is small: in the OLD ``git/hybrid/hybrid/forecasters.py``
-``Forecaster.forward`` integrated the combined dynamics with
-``torchdiffeq.odeint`` and dispatched to a ``DerivativeEstimator`` that
-called both ``model_phy`` and ``model_aug``. None of that was reachable
-from the shipping training pipeline: ``HybridExperiment`` (in
-:mod:`orthoreg.models.exp`) accesses ``self.net.model_phy`` and
-``self.net.model_aug`` directly inside its ``derivative_forward`` method,
-never going through ``Forecaster.forward``. Verified by ``grep -rn
-'forecaster\\.forward\\|net\\.forward'`` over the OLD
-``hybrid/{exp,train,train_baseline,setup,datamodule}.py`` -- the only
-producer of those attributes is ``setup_model``; nothing else calls
-``forward``.
+``HybridExperiment`` (in :mod:`orthoreg.models.experiment`) calls
+``self.net.model_phy`` and ``self.net.model_aug`` directly inside its
+``derivative_forward`` method and never goes through a ``forward`` of this
+class, so the container only registers the two sub-networks as parameters.
 
-The ``method`` and ``options`` arguments are kept on the constructor for
-parity with the OLD signature in case future code wants to integrate the
-joint dynamics, but they are unused today.
+The ``method`` and ``options`` arguments are kept on the constructor in case
+future code wants to integrate the joint dynamics, but they are unused today.
 """
 
 import torch.nn as nn

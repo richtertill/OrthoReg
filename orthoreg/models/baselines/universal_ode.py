@@ -13,6 +13,8 @@ from typing import Tuple, Optional, Callable
 import lightning as L
 from torchdiffeq import odeint
 
+from orthoreg.models.baselines.library_torch import TorchFeatureLibrary, library_support_metrics
+
 
 class UniversalODENetwork(nn.Module):
     """
@@ -169,13 +171,34 @@ class UniversalODEExperiment(L.LightningModule):
             include_time=include_time
         )
         
-        # Known physics parameters (can be learnable or fixed)
-        self.omega0 = nn.Parameter(torch.tensor(1.0))  # Natural frequency
-        self.alpha = nn.Parameter(torch.tensor(0.2))   # Damping coefficient
-        
-        # Loss weights
-        self.data_weight = cfg.training.get('data_weight', 1.0)
-        self.physics_weight = cfg.training.get('physics_weight', 0.1)
+        # Physics prior: ``known`` uses the true base pendulum equation;
+        # ``library`` replaces it by Theta(x) xi with OrthoReg's library,
+        # learnable coefficients xi and OrthoReg's L1 weight mu (same
+        # information as the hybrids).
+        self.physics = cfg.model.get('physics', 'known')
+        if self.physics == 'known':
+            # Known physics parameters (can be learnable or fixed)
+            self.omega0 = nn.Parameter(torch.tensor(1.0))  # Natural frequency
+            self.alpha = nn.Parameter(torch.tensor(0.2))   # Damping coefficient
+        elif self.physics == 'library':
+            if feature_library is None:
+                raise ValueError("model.physics=library needs the fitted feature library")
+            self.library = TorchFeatureLibrary.from_feature_library(feature_library)
+            if self.library.n_states != state_dim:
+                raise ValueError(f"Library is built on {self.library.n_states} states, "
+                                 f"the Universal ODE has {state_dim}")
+            # Coefficients xi, initialized like PhysicalModel.coef_
+            self.coef_ = nn.Parameter(torch.empty(self.library.n_features, state_dim))
+            nn.init.kaiming_uniform_(self.coef_, a=np.sqrt(5))
+            self.l1_reg_weight = cfg.training.get('l1_reg_weight', cfg.training.orthogonal_symbolic_reg_weight)
+            self.threshold = cfg.training.symbolic_threshold
+            self.n_out_of_library_terms = cfg.dataset.get('n_out_of_library_terms', 0)
+        else:
+            raise ValueError(f"Unknown model.physics={self.physics!r}, expected 'known' or 'library'")
+
+        # Loss weights (model config first, training config as fallback)
+        self.data_weight = cfg.model.get('data_weight', cfg.training.get('data_weight', 1.0))
+        self.physics_weight = cfg.model.get('physics_weight', cfg.training.get('physics_weight', 0.1))
         
         # Training parameters
         self.lr = cfg.training.lr
@@ -196,9 +219,16 @@ class UniversalODEExperiment(L.LightningModule):
             t: time tensor.
             x: state tensor of shape (batch, 2) = (theta, theta_dot).
 
+        With ``model.physics=library`` the known part is Theta(x) xi for all
+        state components (no identity term).
+
         Returns:
             tensor of shape (batch, 2) with the known dynamics.
         """
+        if self.physics == 'library':
+            x2 = x.unsqueeze(0) if x.dim() == 1 else x
+            return self.library(x2) @ self.coef_
+
         # Handle both 1D and 2D x tensors
         if x.dim() == 1:
             theta = x[0:1].unsqueeze(0)  # (1, 1)
@@ -363,7 +393,14 @@ class UniversalODEExperiment(L.LightningModule):
             'trajectory_loss': trajectory_loss,
             'physics_reg': physics_reg
         }
-        
+
+        # L1 on the library coefficients, as OrthoReg's mu * ||w||_1
+        if self.physics == 'library':
+            l1_reg = self.l1_reg_weight * torch.norm(self.coef_, p=1)
+            total_loss = total_loss + l1_reg
+            loss_dict['total_loss'] = total_loss
+            loss_dict['l1_reg'] = l1_reg
+
         return total_loss, loss_dict
     
     def training_step(self, batch, batch_idx):
@@ -386,8 +423,9 @@ class UniversalODEExperiment(L.LightningModule):
             self.log(f'train/{key}', value, prog_bar=True)
         
         # Log physics parameters
-        self.log('train/omega0', self.omega0, prog_bar=False)
-        self.log('train/alpha', self.alpha, prog_bar=False)
+        if self.physics == 'known':
+            self.log('train/omega0', self.omega0, prog_bar=False)
+            self.log('train/alpha', self.alpha, prog_bar=False)
         
         return total_loss
     
@@ -414,13 +452,25 @@ class UniversalODEExperiment(L.LightningModule):
         total_loss, loss_dict = self.total_loss(t, y, dy)
         
         # Get test set name
-        test_set_names = ['id', 'id_extra', 'ood_t2', 'ood_t2_extra', 'ood_t3', 'ood_t3_extra']
-        test_set = test_set_names[dataloader_idx] if dataloader_idx < len(test_set_names) else f'test_{dataloader_idx}'
+        # Name of the split behind this dataloader (same order as
+        # HybridDataModule.test_dataloader).
+        test_set_key = self.trainer.datamodule.test_set_names[dataloader_idx]
+        test_set = test_set_key.replace('_test_data', '').replace('_data', '')
         
         # Log test losses
         for key, value in loss_dict.items():
             self.log(f'test/{test_set}/{key}', value, prog_bar=False)
-        
+
+        # Support metrics of xi against the split's true coefficients
+        current_test_dataset = self.trainer.datamodule.data_dict.get(test_set_key, None)
+        if self.physics == 'library' and hasattr(current_test_dataset, 'W_true'):
+            support = library_support_metrics(
+                self.coef_, current_test_dataset.W_true, self.library.feature_names,
+                self.threshold, self.n_out_of_library_terms,
+            )
+            for key, value in support.items():
+                self.log(f'test/{test_set}/{key}', float(value), prog_bar=False)
+
         # Compute trajectory prediction for state space evaluation
         with torch.no_grad():
             # Predict trajectory using ODE integration
@@ -443,9 +493,9 @@ class UniversalODEExperiment(L.LightningModule):
                     atol=self.ode_atol
                 )
                 
-                y_pred = y_pred.permute(1, 0)  # (time, state) -> (state, time)
+                y_pred = y_pred.reshape(t_sample.shape[0], -1)  # (time, state)
                 y_true_sample = y[0]  # (time, state)
-                
+
                 # Compute state space MSE
                 state_mse = F.mse_loss(y_pred, y_true_sample)
                 

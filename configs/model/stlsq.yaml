@@ -1,0 +1,21 @@
+# @package model
+# Canonical SINDy baseline: PySINDy sequential thresholded least squares
+# (STLSQ) on the same library and splits as the hybrid models, scored with
+# the same metrics. No gradient training.
+# Run via: python -m orthoreg.training.train_baseline dataset=pendulum model=stlsq
+
+hybrid_setting: false
+symbolic_regression: stlsq
+baseline_type: stlsq
+
+# Derivative targets used for the test metrics (see orthoreg.data.datamodule).
+diff_method: smooth
+
+# STLSQ settings. The fit uses second-order finite differences of the
+# training trajectories as targets.
+stlsq_threshold: 0.045
+
+# Augmentation-MLP shape is unused (``hybrid_setting=false``) but kept so
+# that orthoreg.feature_library.setup_model can build the container.
+hidden_dim: 64
+num_layers: 3

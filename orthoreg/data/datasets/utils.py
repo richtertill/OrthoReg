@@ -1,4 +1,4 @@
-"""Base time-series dataset used by the four paper systems."""
+"""Base time-series dataset used by the paper systems."""
 
 import os
 from abc import ABC
@@ -93,12 +93,16 @@ class SeriesDataset(ABC, Dataset):
         self.dy = {"smooth": self.estimate_derivatives(method="smooth")}
     
     def get_initial_value_array(self, y0, n_samples):
+        # Each entry of y0 is either a fixed value or a (low, high) range that
+        # is sampled uniformly. Ranges may come as tuples, lists or Hydra
+        # ListConfigs; all of them are treated as ranges.
         initial_value_array = []
         for i in range(self.state_dim):
-            if isinstance(y0[i], tuple):
-                array = np.random.uniform(*y0[i], n_samples)
+            if np.isscalar(y0[i]):
+                array = np.tile(float(y0[i]), n_samples)
             else:
-                array = np.tile(y0[i], n_samples)
+                low, high = (float(bound) for bound in y0[i])
+                array = np.random.uniform(low, high, n_samples)
             initial_value_array.append(array)
 
         initial_value_array = np.stack(initial_value_array, axis=1)
@@ -147,3 +151,15 @@ class SeriesDataset(ABC, Dataset):
 
     def __getitem__(self, idx):
         return idx, self.y[idx]
+
+
+def as_ranges(y0):
+    """Convert initial-condition specs to plain Python types.
+
+    Ranges become ``(low, high)`` tuples and fixed values floats, so the spec
+    can be hashed (dataset cache key) and sampled consistently.
+    """
+    return [
+        float(entry) if np.isscalar(entry) else tuple(float(b) for b in entry)
+        for entry in y0
+    ]

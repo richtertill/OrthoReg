@@ -10,7 +10,8 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [
-    {name = "Anonymous Authors", email = "anon@example.com"}
+    {name = "Till Richter"},
+    {name = "Niki Kilbertus"},
 ]
 keywords = [
     "hybrid-modeling",
@@ -62,6 +63,9 @@ experiments = [
 Homepage = "https://github.com/richtertill/OrthoReg"
 Repository = "https://github.com/richtertill/OrthoReg"
 "Bug Tracker" = "https://github.com/richtertill/OrthoReg/issues"
+
+[tool.setuptools.packages.find]
+include = ["orthoreg*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
